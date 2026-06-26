@@ -150,7 +150,7 @@ HI  - Large  - Trans.csv
 
 ## ⚡ Quick Start (12-Hour Plan)
 
-### Hour 0 — Environment Setup (30 min)
+### Environment Setup (30 min)
 
 ```bash
 # 1. Clone / unzip project
@@ -182,7 +182,7 @@ Expected output: `True  NVIDIA GeForce RTX 5060`
 
 ---
 
-### Hour 1–2 — Understand the Data
+### Understand the Data
 
 ```bash
 # Quick data exploration
@@ -200,7 +200,7 @@ Unique dst accounts: 15,204
 
 ---
 
-### Hour 3–4 — Centralized Baseline
+### Centralized Baseline
 
 ```bash
 # Train GraphSAGE without federation (baseline)
@@ -217,7 +217,7 @@ python run_centralized.py \
 
 ---
 
-### Hour 5–7 — Federated Learning
+### Federated Learning
 
 ```bash
 # Run federated simulation (4 bank clients, 20 rounds)
@@ -235,7 +235,7 @@ python run_federated.py \
 
 ---
 
-### Hour 8 — Dashboard
+### Dashboard
 
 ```bash
 streamlit run dashboard/app.py
@@ -244,7 +244,7 @@ streamlit run dashboard/app.py
 
 ---
 
-### Hour 9 — API
+### API
 
 ```bash
 uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
@@ -270,7 +270,7 @@ curl -X POST http://localhost:8000/predict \
 
 ---
 
-### Hour 10–11 — Docker
+### Docker
 
 ```bash
 # Build and run all services
@@ -347,7 +347,7 @@ python run_federated.py \
     --clients  4
 ```
 
-### Option B — Real Multi-Process (4 terminals)
+### Real Multi-Process (4 terminals)
 
 **Terminal 1 — Server:**
 ```bash
@@ -522,25 +522,7 @@ python run_federated.py --nrows 500000 --rounds 20
 # View results:
 mlflow ui    →  http://127.0.0.1:5000
 cat outputs/centralized_results.json
-```
 
-| Model | Accuracy | Precision | Recall | F1 | AUC |
-|-------|----------|-----------|--------|----|-----|
-| GraphSAGE (centralized) | — | — | — | — | — |
-| GraphSAGE (federated, 20 rounds) | — | — | — | — | — |
-
-### Federated Learning Convergence (fill in after training)
-
-| Round | F1 |
-|-------|----|
-| 1  | — |
-| 5  | — |
-| 10 | — |
-| 20 | — |
-
-Results are auto-saved to `outputs/centralized_results.json` and `outputs/global_model_history.json` and logged to MLflow after each run.
-
----
 
 ## 📝 Report Guide
 
@@ -597,25 +579,3 @@ docker compose down
 sudo lsof -i :8501 | awk 'NR!=1 {print $2}' | xargs kill
 docker compose up -d
 ```
-
----
-
-## 📚 References
-
-1. Hamilton, W. et al. (2017). *Inductive Representation Learning on Large Graphs* (GraphSAGE). NeurIPS.
-2. McMahan, H. et al. (2017). *Communication-Efficient Learning of Deep Networks from Decentralized Data* (FedAvg). AISTATS.
-3. IBM Research (2023). *Transactions for Anti-Money Laundering (AML)*. Kaggle Dataset.
-4. Beutel, D. et al. (2022). *Flower: A Friendly Federated Learning Framework*. arXiv.
-5. Jiang, J. et al. (2023). *Graph Neural Networks for Financial Fraud Detection: A Survey*.
-
----
-
-## 👤 Author
-
-**Royel**  
-Department of Software Engineering  
-Daffodil International University
-
----
-
-*Built with ❤️ in 12 hours using PyTorch, Flower AI, and the IBM AML dataset.*
