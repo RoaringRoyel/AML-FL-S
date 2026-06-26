@@ -28,7 +28,7 @@ st.set_page_config(
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
-TRANS_PATH   = os.getenv("TRANS_PATH",   "data/HI-Small_Trans.csv")
+TRANS_PATH   = os.getenv("TRANS_PATH",   "data/HI-Medium_Trans.csv")
 MODEL_PATH   = os.getenv("MODEL_PATH",   "outputs/centralized_model.pt")
 HISTORY_PATH = os.getenv("HISTORY_PATH", "outputs/global_model_history.json")
 RESULTS_PATH = os.getenv("RESULTS_PATH", "outputs/centralized_results.json")

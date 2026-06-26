@@ -22,7 +22,11 @@ def parse_args():
 
     p.add_argument("--trans", default="data/HI-Medium_Trans.csv")
     p.add_argument("--accounts", default="data/HI-Medium_accounts.csv")
-    p.add_argument("--nrows", type=int, default=None)
+    # HI-Medium is ~2.8 GB (≈5 M rows). With 8 GB VRAM (RTX 5060) cap at
+    # 500 000 rows → ~80 K nodes, ~500 K edges → comfortably fits in VRAM
+    # with NeighborLoader (batch_size=2048, num_neighbors=[15,10]).
+    # To use the full dataset on a GPU with more VRAM, set --nrows 0 (no limit).
+    p.add_argument("--nrows", type=int, default=500_000)
 
     p.add_argument("--rounds", type=int, default=10)
     p.add_argument("--clients", type=int, default=4)
@@ -38,10 +42,13 @@ def main():
     setup_mlflow("AML")
 
     # ── data
+    # --nrows 0 means no limit (load full dataset)
+    nrows = args.nrows if args.nrows and args.nrows > 0 else None
+
     df, node_feats, node_labels, bank_splits = full_pipeline(
         args.trans,
         args.accounts,
-        nrows=args.nrows,
+        nrows=nrows,
         n_clients=args.clients,
     )
 

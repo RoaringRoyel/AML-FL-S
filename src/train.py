@@ -87,27 +87,63 @@ def train_epoch(
     return total_loss / total_examples
 
 @torch.no_grad()
-def evaluate(model, data, device):
+def evaluate(model, data_or_loader, device, mask=None):
+    """
+    Evaluate model on a Data object (full-graph) or a NeighborLoader (batched).
+
+    Parameters
+    ----------
+    model          : GraphSAGE_AML
+    data_or_loader : PyG Data  OR  NeighborLoader
+    device         : torch.device or str
+    mask           : optional bool tensor — used only when data_or_loader is a Data object
+                     (pass data.val_mask / data.test_mask to restrict metrics to a split)
+    """
+    from torch_geometric.data import Data as PyGData
+
     model.eval()
-    data = data.to(device)
+    device = torch.device(device) if isinstance(device, str) else device
 
-    out = model(data.x, data.edge_index)
-    prob = torch.softmax(out, dim=1)
-    pred = out.argmax(dim=1)
+    if isinstance(data_or_loader, PyGData):
+        # ── Full-graph inference (small/medium graphs, or per-client subgraphs) ──
+        data = data_or_loader.to(device)
+        out  = model(data.x, data.edge_index)
+        prob = torch.softmax(out, dim=1)
+        pred = out.argmax(dim=1)
 
-    y_true = data.y.cpu().numpy()
-    y_pred = pred.cpu().numpy()
-    y_prob = prob[:, 1].cpu().numpy()
+        if mask is not None:
+            mask = mask.to(device)
+            y_true = data.y[mask].cpu().numpy()
+            y_pred = pred[mask].cpu().numpy()
+            y_prob = prob[mask, 1].cpu().numpy()
+        else:
+            y_true = data.y.cpu().numpy()
+            y_pred = pred.cpu().numpy()
+            y_prob = prob[:, 1].cpu().numpy()
 
-    from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, roc_auc_score
+    else:
+        # ── Batched inference via NeighborLoader (large graphs / run_centralized) ──
+        all_y_true, all_y_pred, all_y_prob = [], [], []
+        for batch in data_or_loader:
+            batch = batch.to(device)
+            out   = model(batch.x, batch.edge_index)
+            out   = out[:batch.batch_size]          # seed nodes only
+            prob  = torch.softmax(out, dim=1)
+            pred  = out.argmax(dim=1)
+            all_y_true.append(batch.y[:batch.batch_size].cpu().numpy())
+            all_y_pred.append(pred.cpu().numpy())
+            all_y_prob.append(prob[:, 1].cpu().numpy())
+
+        y_true = np.concatenate(all_y_true)
+        y_pred = np.concatenate(all_y_pred)
+        y_prob = np.concatenate(all_y_prob)
 
     metrics = {
-        "accuracy": accuracy_score(y_true, y_pred),
+        "accuracy":  accuracy_score(y_true, y_pred),
         "precision": precision_score(y_true, y_pred, zero_division=0),
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f1": f1_score(y_true, y_pred, zero_division=0),
+        "recall":    recall_score(y_true, y_pred, zero_division=0),
+        "f1":        f1_score(y_true, y_pred, zero_division=0),
     }
-
     if len(set(y_true)) > 1:
         metrics["auc"] = roc_auc_score(y_true, y_prob)
     else:
@@ -158,15 +194,24 @@ def train_centralized(
     train_losses = []
     val_f1s      = []
 
+    # ── Build loaders (train_centralized is used by quick_start.py) ─────────
+    train_loader = NeighborLoader(
+        data,
+        input_nodes=data.train_mask,
+        num_neighbors=[15, 10],
+        batch_size=2048,
+        shuffle=True,
+    )
+
     log.info(f"Starting centralized training for {epochs} epochs on {device}")
 
     for epoch in range(1, epochs + 1):
-        loss = train_epoch(model, data, optimizer, class_weights, device)
+        loss = train_epoch(model, train_loader, optimizer, class_weights, device)
         train_losses.append(loss)
 
         if epoch % 5 == 0 or epoch == 1:
-            val_m  = evaluate(model, data, data.val_mask, device)
-            train_m = evaluate(model, data, data.train_mask, device)
+            val_m   = evaluate(model, data, device, mask=data.val_mask)
+            train_m = evaluate(model, data, device, mask=data.train_mask)
             val_f1s.append(val_m["f1"])
 
             scheduler.step(val_m["f1"])
@@ -188,7 +233,7 @@ def train_centralized(
     if best_state:
         model.load_state_dict(best_state)
 
-    test_m = evaluate(model, data, data.test_mask, device)
+    test_m = evaluate(model, data, device, mask=data.test_mask)
     log.info("═" * 60)
     log.info("FINAL TEST RESULTS")
     print_metrics("TEST ", test_m)

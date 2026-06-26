@@ -68,11 +68,12 @@ class AMLFederatedClient(fl.client.NumPyClient):
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
 
+        # Pass data + device; restrict metrics to test split via mask
         metrics = evaluate(
             self.model,
             self.data,
-            self.data.test_mask,
             self.device,
+            mask=self.data.test_mask,
         )
 
         return float(1.0 - metrics["f1"]), int(self.data.test_mask.sum()), metrics
