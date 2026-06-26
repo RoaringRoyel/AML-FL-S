@@ -1,0 +1,106 @@
+version: "3.9"
+
+# ══════════════════════════════════════════════════════════════════
+# AML Federated Intelligence Platform — docker-compose.yml
+#
+# Services:
+#   flower-server  — Flower aggregation server
+#   bank-a/b/c/d   — 4 Flower clients (one per bank)
+#   dashboard      — Streamlit UI (port 8501)
+#   api            — FastAPI inference (port 8000)
+#
+# Usage:
+#   docker compose up --build
+#
+# Note: Training runs automatically. The dashboard and API
+# start after training completes (depends_on ordering).
+# ══════════════════════════════════════════════════════════════════
+
+x-client-common: &client-common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.client
+  volumes:
+    - ./data:/app/data:ro
+    - ./outputs:/app/outputs
+  environment:
+    - SERVER_ADDR=flower-server:8080
+    - NROWS=500000
+  depends_on:
+    - flower-server
+  restart: on-failure
+
+services:
+
+  # ── Flower Server ──────────────────────────────────────────────
+  flower-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost',8080)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Flower Clients (Banks) ─────────────────────────────────────
+  bank-a:
+    <<: *client-common
+    environment:
+      - SERVER_ADDR=flower-server:8080
+      - BANK_ID=0
+      - NROWS=500000
+
+  bank-b:
+    <<: *client-common
+    environment:
+      - SERVER_ADDR=flower-server:8080
+      - BANK_ID=1
+      - NROWS=500000
+
+  bank-c:
+    <<: *client-common
+    environment:
+      - SERVER_ADDR=flower-server:8080
+      - BANK_ID=2
+      - NROWS=500000
+
+  bank-d:
+    <<: *client-common
+    environment:
+      - SERVER_ADDR=flower-server:8080
+      - BANK_ID=3
+      - NROWS=500000
+
+  # ── Streamlit Dashboard ────────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data:ro
+      - ./outputs:/app/outputs:ro
+    environment:
+      - TRANS_PATH=/app/data/HI-Medium_Trans.csv
+      - MODEL_PATH=/app/outputs/centralized_model.pt
+    restart: unless-stopped
+
+  # ── FastAPI Inference API ──────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dashboard
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data:ro
+      - ./outputs:/app/outputs:ro
+    environment:
+      - MODEL_PATH=/app/outputs/centralized_model.pt
+    restart: unless-stopped

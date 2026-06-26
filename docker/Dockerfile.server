@@ -1,0 +1,19 @@
+# ── Flower Server ────────────────────────────────────────────────
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements_docker.txt .
+RUN pip install --no-cache-dir -r requirements_docker.txt
+
+COPY . .
+RUN pip install --no-cache-dir -e .
+
+EXPOSE 8080
+
+CMD ["python", "-m", "federated.server", "--host", "0.0.0.0", "--port", "8080", "--rounds", "20", "--min-clients", "4"]

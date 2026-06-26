@@ -1,0 +1,23 @@
+# ── Dashboard + API ──────────────────────────────────────────────
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements_docker.txt .
+RUN pip install --no-cache-dir -r requirements_docker.txt
+
+COPY . .
+RUN pip install --no-cache-dir -e .
+
+EXPOSE 8501 8000
+
+# Default: run dashboard
+# Override CMD in docker-compose to run FastAPI instead
+CMD ["streamlit", "run", "dashboard/app.py", \
+     "--server.port=8501", \
+     "--server.address=0.0.0.0", \
+     "--server.headless=true"]

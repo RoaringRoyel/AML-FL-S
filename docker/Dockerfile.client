@@ -1,0 +1,22 @@
+# ── Flower Client (Bank) ─────────────────────────────────────────
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements_docker.txt .
+RUN pip install --no-cache-dir -r requirements_docker.txt
+
+COPY . .
+RUN pip install --no-cache-dir -e .
+
+# BANK_ID  : integer index 0-3 (maps to top-N banks by tx count)
+# SERVER   : flower server address
+ENV BANK_ID=0
+ENV SERVER_ADDR=flower-server:8080
+ENV NROWS=500000
+
+CMD ["python", "run_client_docker.py"]
