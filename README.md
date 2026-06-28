@@ -148,8 +148,6 @@ HI  - Large  - Trans.csv
 
 ---
 
-## ⚡ Quick Start (12-Hour Plan)
-
 ### Environment Setup (30 min)
 
 ```bash
