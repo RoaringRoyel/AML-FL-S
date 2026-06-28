@@ -10,7 +10,7 @@
 - [Project Overview](#-project-overview)
 - [Architecture](#-architecture)
 - [Dataset Guide](#-dataset-guide)
-- [Quick Start (12-Hour Plan)](#-quick-start-12-hour-plan)
+- [Quick Start
 - [Full Setup](#-full-setup)
 - [Running the Project](#-running-the-project)
 - [Docker Deployment](#-docker-deployment)
